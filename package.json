@@ -4,6 +4,15 @@
   "description": "React context and hook for browser extension detection with polling",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/InfoGata/extension-components.git"
+  },
+  "homepage": "https://github.com/InfoGata/extension-components#readme",
+  "bugs": {
+    "url": "https://github.com/InfoGata/extension-components/issues"
+  },
+  "sideEffects": false,
   "files": ["dist"],
   "main": "./dist/extension-components.js",
   "module": "./dist/extension-components.js",
