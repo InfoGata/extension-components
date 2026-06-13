@@ -10,7 +10,7 @@ export default defineConfig({
       fileName: "extension-components",
       formats: ["es"],
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ["react", "react/jsx-runtime"],
     },
   },
