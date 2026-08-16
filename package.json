@@ -4,6 +4,7 @@
   "description": "React context and hook for browser extension detection with polling",
   "type": "module",
   "license": "MIT",
+  "author": "Elijah Green",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/InfoGata/extension-components.git"
@@ -65,5 +66,9 @@
     "extension-detection",
     "polling",
     "context"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
