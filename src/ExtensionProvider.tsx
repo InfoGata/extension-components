@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useRef, useState } from "react";
 import type { ExtensionProviderProps, ExtensionContextType } from "./types";
 
 export const ExtensionContext = createContext<ExtensionContextType | undefined>(
@@ -16,12 +16,22 @@ export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({
     null
   );
 
+  // Held in a ref so the detection cycle below is not a dependency of the
+  // caller's function identity. Consumers commonly pass an inline arrow, and
+  // restarting the effect on every render would restart initialPollDuration
+  // too, leaving extensionDetected stuck at null forever.
+  const hasExtensionRef = useRef(hasExtension);
+  useEffect(() => {
+    hasExtensionRef.current = hasExtension;
+  }, [hasExtension]);
+
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
+    let timeoutId: ReturnType<typeof setTimeout>;
     let detected = false;
 
     const checkExtension = (): void => {
-      if (hasExtension()) {
+      if (hasExtensionRef.current()) {
         detected = true;
         setExtensionDetected(true);
         clearInterval(intervalId);
@@ -36,7 +46,7 @@ export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({
       intervalId = setInterval(checkExtension, initialPollInterval);
 
       // After initial duration, switch to slower continuous polling
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         clearInterval(intervalId);
         if (!detected) {
           setExtensionDetected(false);
@@ -48,8 +58,11 @@ export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({
 
     return () => {
       clearInterval(intervalId);
+      // Must also clear the phase-switch timeout: if it fires after cleanup it
+      // reports a stale "not detected" and starts an interval nothing can clear.
+      clearTimeout(timeoutId);
     };
-  }, [hasExtension, initialPollInterval, slowPollInterval, initialPollDuration]);
+  }, [initialPollInterval, slowPollInterval, initialPollDuration]);
 
   return (
     <ExtensionContext.Provider value={{ extensionDetected }}>

@@ -91,6 +91,10 @@ function MyComponent() {
 
 This allows for fast detection when the extension loads quickly, while still detecting extensions that load after the page.
 
+`hasExtension` is called through a ref, so passing an inline arrow is safe — re-rendering the provider does not restart the detection cycle, and the most recently rendered function is the one polled.
+
+Because detection can resolve after the first paint, read `extensionDetected` from `useExtension()` rather than calling your own detection function during render. A direct call renders once against whatever the page looked like at mount and never updates.
+
 ## Type Exports
 
 ```tsx

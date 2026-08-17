@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
+import React from "react";
 import { ExtensionProvider } from "../ExtensionProvider";
 import { useExtension } from "../useExtension";
 
@@ -155,6 +156,111 @@ describe("ExtensionProvider", () => {
 
     // Initial call + polling calls
     expect(hasExtension.mock.calls.length).toBeGreaterThan(5);
+  });
+
+  it("should stop polling after unmount", async () => {
+    const hasExtension = vi.fn().mockReturnValue(false);
+
+    const { unmount } = render(
+      <ExtensionProvider hasExtension={hasExtension}>
+        <TestComponent />
+      </ExtensionProvider>
+    );
+
+    unmount();
+    const callsAtUnmount = hasExtension.mock.calls.length;
+
+    // Advance well past initialPollDuration so the phase-switch timeout would
+    // have fired and started the slow interval.
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+
+    expect(hasExtension.mock.calls.length).toBe(callsAtUnmount);
+  });
+
+  it("should not restart detection when hasExtension changes identity", async () => {
+    const detect = vi.fn().mockReturnValue(false);
+
+    const { rerender } = render(
+      <ExtensionProvider hasExtension={() => detect()} initialPollDuration={3000}>
+        <TestComponent />
+      </ExtensionProvider>
+    );
+
+    // A parent re-rendering mid-detection hands down a fresh arrow each time.
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      rerender(
+        <ExtensionProvider hasExtension={() => detect()} initialPollDuration={3000}>
+          <TestComponent />
+        </ExtensionProvider>
+      );
+    }
+
+    // 3000ms of real elapsed time have passed, so the initial phase is over
+    // regardless of how many times the parent re-rendered.
+    expect(screen.getByTestId("status").textContent).toBe("not-detected");
+  });
+
+  it("should call the latest hasExtension after a rerender", async () => {
+    const stale = vi.fn().mockReturnValue(false);
+    const fresh = vi.fn().mockReturnValue(true);
+
+    const { rerender } = render(
+      <ExtensionProvider hasExtension={stale}>
+        <TestComponent />
+      </ExtensionProvider>
+    );
+
+    expect(screen.getByTestId("status").textContent).toBe("loading");
+
+    rerender(
+      <ExtensionProvider hasExtension={fresh}>
+        <TestComponent />
+      </ExtensionProvider>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(fresh).toHaveBeenCalled();
+    expect(screen.getByTestId("status").textContent).toBe("detected");
+  });
+
+  it("should not revert to not-detected when remounted under StrictMode", async () => {
+    let detected = false;
+    const hasExtension = vi.fn().mockImplementation(() => detected);
+
+    render(
+      <React.StrictMode>
+        <ExtensionProvider hasExtension={hasExtension}>
+          <TestComponent />
+        </ExtensionProvider>
+      </React.StrictMode>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+
+    detected = true;
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(screen.getByTestId("status").textContent).toBe("detected");
+
+    // The discarded first effect's timeout fires around here.
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(screen.getByTestId("status").textContent).toBe("detected");
   });
 });
 
