@@ -31,7 +31,20 @@ export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({
     let detected = false;
 
     const checkExtension = (): void => {
-      if (hasExtensionRef.current()) {
+      // The predicate is the consumer's code and typically reads globals the
+      // extension writes. Called from a timer it has no caller to catch it, so
+      // a throw becomes an uncaught exception -- which is how a predicate
+      // reading `window` after a test environment is torn down fails a whole
+      // run. A predicate that cannot answer has not found the extension, so
+      // treat it as absent and keep polling: the next tick may well succeed.
+      let present: boolean;
+      try {
+        present = hasExtensionRef.current();
+      } catch {
+        return;
+      }
+
+      if (present) {
         detected = true;
         setExtensionDetected(true);
         clearInterval(intervalId);

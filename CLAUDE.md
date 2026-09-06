@@ -29,10 +29,11 @@ Detection is a three-phase state machine in a single `useEffect` in `src/Extensi
 2. Otherwise poll every `initialPollInterval` (100ms) for `initialPollDuration` (3000ms), with state still `null` (i.e. "unknown", not "absent").
 3. At the end of that window, state flips to `false` but polling *continues forever* at `slowPollInterval` (2000ms), so a late-loading extension still flips it to `true`.
 
-Three things to preserve when touching this file:
+Four things to preserve when touching this file:
 
 - The `detected` local is a plain `let`, not state, because the `setTimeout` callback closes over it and needs the value synchronously — reading state there would see a stale render.
 - `hasExtension` is read through `hasExtensionRef`, not from the effect's dependency array. Consumers pass inline arrows; depending on the function identity restarted the whole cycle — including the `initialPollDuration` timer — on every parent render, which left `extensionDetected` pinned at `null` forever. Don't put it back in the deps.
+- The `hasExtension` call is wrapped in try/catch and a throw counts as "not found", because the predicate is consumer code running on a timer: an escaping throw has no caller and becomes an uncaught exception. Consumers commonly read `window`, which is gone once a test environment tears down. Returning rather than latching keeps the poll alive so a recovering predicate can still report.
 - Both timers must be cleared in the cleanup. Dropping the `clearTimeout` lets a discarded effect's phase-switch fire after unmount: it reports a stale `false` (visibly reverting a real detection under StrictMode's double-mount) and starts a slow-poll interval nothing holds a handle to.
 
 `useExtension` distinguishes `undefined` context (thrown error — used outside a provider) from a `null` `extensionDetected` (still detecting). Don't collapse those.

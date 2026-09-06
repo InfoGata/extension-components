@@ -262,6 +262,39 @@ describe("ExtensionProvider", () => {
 
     expect(screen.getByTestId("status").textContent).toBe("detected");
   });
+
+  it("keeps polling when the predicate throws instead of surfacing the throw", async () => {
+    // A predicate reading a global that its environment has torn down throws
+    // rather than returning false. It runs on a timer, so an escaping throw is
+    // an uncaught exception with nowhere to be handled.
+    const hasExtension = vi
+      .fn()
+      .mockImplementationOnce(() => false)
+      .mockImplementation(() => {
+        throw new ReferenceError("window is not defined");
+      });
+
+    render(
+      <ExtensionProvider hasExtension={hasExtension}>
+        <TestComponent />
+      </ExtensionProvider>
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByTestId("status").textContent).toBe("not-detected");
+
+    // Still polling: a predicate that recovers is still able to report.
+    hasExtension.mockImplementation(() => true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.getByTestId("status").textContent).toBe("detected");
+  });
+
 });
 
 describe("useExtension", () => {
