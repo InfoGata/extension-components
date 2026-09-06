@@ -1,6 +1,6 @@
 {
   "name": "@infogata/extension-components",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React context and hook for browser extension detection with polling",
   "type": "module",
   "license": "MIT",
