@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
+import { hasExtension as defaultHasExtension } from "./hasExtension";
 import type { ExtensionProviderProps, ExtensionContextType } from "./types";
 
 export const ExtensionContext = createContext<ExtensionContextType | undefined>(
@@ -7,7 +8,7 @@ export const ExtensionContext = createContext<ExtensionContextType | undefined>(
 
 export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({
   children,
-  hasExtension,
+  hasExtension = defaultHasExtension,
   initialPollInterval = 100,
   slowPollInterval = 2000,
   initialPollDuration = 3000,

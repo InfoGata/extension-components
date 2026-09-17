@@ -36,6 +36,8 @@ Four things to preserve when touching this file:
 - The `hasExtension` call is wrapped in try/catch and a throw counts as "not found", because the predicate is consumer code running on a timer: an escaping throw has no caller and becomes an uncaught exception. Consumers commonly read `window`, which is gone once a test environment tears down. Returning rather than latching keeps the poll alive so a recovering predicate can still report.
 - Both timers must be cleared in the cleanup. Dropping the `clearTimeout` lets a discarded effect's phase-switch fire after unmount: it reports a stale `false` (visibly reverting a real detection under StrictMode's double-mount) and starts a slow-poll interval nothing holds a handle to.
 
+`src/hasExtension.ts` is the default predicate and the `?noextension` switch. Two things to keep: every `sessionStorage` and `location` read is wrapped, because the predicate runs on a timer where a throw has no caller; and `window.InfoGata` is reached by index, not as a property, since consumers declare that global with their own types and a declaration here would collide.
+
 `useExtension` distinguishes `undefined` context (thrown error — used outside a provider) from a `null` `extensionDetected` (still detecting). Don't collapse those.
 
 ## Build/config specifics
